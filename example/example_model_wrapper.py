@@ -26,7 +26,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 
 model_settings = []
 sklearn_setting = {"forest_class": RandomForestClassifier,
-                   "model_options": {"min_samples_leaf": 10},
+                   "model_options": {"min_samples_leaf": 10,
+                                     "random_state": 0},
                    "fitting_options": {}}
 model_settings.append(sklearn_setting)
 
@@ -34,7 +35,8 @@ lgbm_setting = {"forest_class": LGBMClassifier,
                 "model_options": {"objective": "binary",
                                   "num_leaves": 31,
                                   "learning_rate": 0.05,
-                                  "n_estimators": 50},
+                                  "n_estimators": 50,
+                                  "random_state": 0},
                 "fitting_options": {"eval_set": [(X_test, y_test)],
                                     "eval_metric": "multi_logloss",
                                     "early_stopping_rounds": 10}}
@@ -47,7 +49,8 @@ model_settings.append(lgbm_setting)
 # booster[174]:
 # 0:leaf=-0.00331423
 xgb_setting = {"forest_class": XGBClassifier,
-               "model_options": {"max_depth": 4, "eta": 0.3, "silent": 1},
+               "model_options": {"max_depth": 4, "eta": 0.3, "random_state": 0,
+                                 "silent": 1},
                "fitting_options": {"early_stopping_rounds": 10,
                                    "eval_set": [(X_test, y_test)]}}
 model_settings.append(xgb_setting)
@@ -79,7 +82,8 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 model_settings = []
 sklearn_setting = {"forest_class": RandomForestRegressor,
-                   "model_options": {"min_samples_leaf": 10},
+                   "model_options": {"min_samples_leaf": 10,
+                                     "random_state": 0},
                    "fitting_options": {}}
 model_settings.append(sklearn_setting)
 
@@ -87,14 +91,16 @@ lgbm_setting = {"forest_class": LGBMRegressor,
                 "model_options": {"objective": "regression",
                                   "num_leaves": 31,
                                   "learning_rate": 0.05,
-                                  "n_estimators": 50},
+                                  "n_estimators": 50,
+                                  "random_state": 0},
                 "fitting_options": {"eval_set": [(X_test, y_test)],
                                     "eval_metric": "rmse",
                                     "early_stopping_rounds": 10}}
 model_settings.append(lgbm_setting)
 
 xgb_setting = {"forest_class": XGBRegressor,
-               "model_options": {"max_depth": 4, "eta": 0.3, "silent": 1},
+               "model_options": {"max_depth": 4, "eta": 0.3, "random_state": 0,
+                                 "silent": 1},
                "fitting_options": {"early_stopping_rounds": 10,
                                    "eval_set": [(X_test, y_test)]}}
 model_settings.append(xgb_setting)
