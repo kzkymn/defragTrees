@@ -33,6 +33,8 @@ assert (pd.factorize(y)[0] == orig_y).all()
 # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 X_train = X_test = X
 y_train = y_test = y
+# X_train = X_test = orig_X
+# y_train = y_test = orig_y
 
 model_settings = []
 sklearn_setting = {"forest_class": RandomForestClassifier,
@@ -90,17 +92,22 @@ for idx in range(len(model_settings)):
 boston = load_boston()
 X = pd.DataFrame(boston.data, columns=boston.feature_names)
 y = pd.Series(boston.target, name="medv")
+# y = pd.DataFrame(boston.target, columns=("medv", ))
 
 orig_X, orig_y = load_boston(return_X_y=True)
 assert (X.values == orig_X).all()
 assert (y.values == orig_y).all()
+# assert (y["medv"].values == orig_y).all()
 # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 X_train = X_test = X
 y_train = y_test = y
+# X_train = X_test = orig_X
+# y_train = y_test = orig_y
 
 model_settings = []
 sklearn_setting = {"forest_class": RandomForestRegressor,
-                   "model_options": {"min_samples_leaf": 10,
+                   "model_options": {"n_estimators": 100,
+                                     "min_samples_leaf": 10,
                                      "random_state": 0},
                    "fitting_options": {}}
 model_settings.append(sklearn_setting)
