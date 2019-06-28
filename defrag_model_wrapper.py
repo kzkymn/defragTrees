@@ -274,6 +274,6 @@ class DefragModelWrapper():
 
         if len(digit_lst) > 0:
             idx = int("".join(digit_lst))
-            res.append(orig_values[idx-1])
+            res.append(orig_values[idx])
 
         return "".join(res)
