@@ -26,7 +26,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 
 model_settings = []
 sklearn_setting = {"forest_class": RandomForestClassifier,
-                   "model_options": {"min_samples_leaf": 10,
+                   "model_options": {"n_estimators": 100,
+                                     "min_samples_leaf": 10,
                                      "random_state": 0},
                    "fitting_options": {}}
 model_settings.append(sklearn_setting)
