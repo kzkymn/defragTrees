@@ -58,25 +58,47 @@ class DefragModelWrapper():
             return df, None
 
     @staticmethod
-    # def __series_to_array(series: pd.Series) -> np.ndarray, List, str:
-    def __series_to_array(series: pd.Series) -> np.ndarray:
+    def __series_to_array(series: pd.Series, model_type: str = None):
         """convert pd.Series object to np.ndarray for training.
 
         Arguments:
             series {pd.Series} -- pd.Series for conversion
 
+        Keyword Arguments:
+            model_type {str} -- classification or regression (default: {None})
+
+        Raises:
+            ValueError: raises when the value of model_type is neither
+            classification nor regression.
+            TypeError: raises when the type of series is neither pd.DataFrame
+            nor pd.Series.
+
         Returns:
-            np.ndarray -- converted data
+            [type] -- converted data
         """
+        if model_type is None or not isinstance(model_type, str)\
+                or model_type == "":
+            raise ValueError("model_type is not assigned.")
+        if model_type != "classification" and model_type != "regression":
+            raise ValueError("unrecognized model type {}.".format(model_type))
+
+        series_uniques = None
         if not isinstance(series, np.ndarray):
             if isinstance(series, pd.DataFrame):
                 colname = series.columns[0]
-                res, series_uniques = pd.factorize(series[colname])
+                if model_type == "classification":
+                    res, series_uniques = pd.factorize(series[colname])
+                else:
+                    res = series[colname].values
             elif isinstance(series, pd.Series):
                 colname = series.name
-                res, series_uniques = pd.factorize(series)
+                if model_type == "classification":
+                    res, series_uniques = pd.factorize(series)
+                else:
+                    res = series.values
             else:
-                raise TypeError("Type of X \"{}\" is not supported.", type())
+                raise TypeError(
+                    "Type of X \"{}\" is not supported.", type(series))
 
             return res, series_uniques, colname
         else:
@@ -97,26 +119,14 @@ class DefragModelWrapper():
             fitting_options: dict = {},
             defrag_options: dict = {}):
 
-        # convert X and y into np.ndarray if their types are pd.DataFrame
-        X, self.X_colnames_ = self.__df_to_array(X)
-        self.X_converted_ = False if self.X_colnames_ is None else True
-        y, self.y_uniques_, self.y_colname_ = self.__series_to_array(y)
-        self.y_converted_ = False if self.y_colname_ is None else True
-
         # instanciate forest object
         if forest is None:
             if forest_class is None:
                 raise TypeError("model_obj and model_class are None.")
             forest = forest_class(**model_options)
-            if "eval_set" in fitting_options:
-                fitting_options["eval_set"] = self.__encode_eval_sets(
-                    fitting_options["eval_set"])
-            forest.fit(X, y, **fitting_options)
-
-        self.forest_ = forest
 
         # infer type of model_class
-        model_class_name = self.forest_.__class__.__name__
+        model_class_name = forest.__class__.__name__
         if model_type is None or type(model_type) != str or model_type == "":
             if "Classifier" in model_class_name:
                 self.model_type_ = "classification"
@@ -125,6 +135,21 @@ class DefragModelWrapper():
             else:
                 raise TypeError("Unexpected model_type {} has detected.".
                                 format(model_class_name))
+
+        # convert X and y into np.ndarray if their types are pd.DataFrame
+        X, self.X_colnames_ = self.__df_to_array(X)
+        self.X_converted_ = False if self.X_colnames_ is None else True
+        y, self.y_uniques_, self.y_colname_ = self.__series_to_array(
+            y, self.model_type_)
+        self.y_converted_ = False if self.y_colname_ is None else True
+
+        # fitting forest
+        if "eval_set" in fitting_options:
+            fitting_options["eval_set"] = self.__encode_eval_sets(
+                fitting_options["eval_set"])
+        forest.fit(X, y, **fitting_options)
+
+        self.forest_ = forest
 
         # parse tree ensembles into the array of (feature index, threshold)
         with tempfile.TemporaryDirectory() as dname:
@@ -177,8 +202,11 @@ class DefragModelWrapper():
         if self.model_ is None:
             return None
         X, _ = self.__df_to_array(X)
-        if self.y_uniques_ is not None:
-            y = self.y_uniques_.get_indexer(y)
+        if self.model_type_ == "classification":
+            if self.y_uniques_ is not None:
+                y = self.y_uniques_.get_indexer(y)
+        else:
+            y, _, _ = self.__series_to_array(y, self.model_type_)
 
         return self.model_.evaluate(X, y)
 
