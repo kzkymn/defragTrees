@@ -15,10 +15,10 @@ from lightgbm import LGBMClassifier, LGBMRegressor
 
 
 try:
-    from defrag_model_wrapper import DefragModelWrapper
+    from dtrees.defrag_model_wrapper import DefragModelWrapper
 except ImportError:
     sys.path.append("../")
-    from defrag_model_wrapper import DefragModelWrapper
+    from dtrees.defrag_model_wrapper import DefragModelWrapper
 
 # load classification data
 X, y = load_iris(return_X_y=True)

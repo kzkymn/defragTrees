@@ -11,7 +11,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from defragTrees import DefragModel
+from .defrag_trees import DefragModel
 
 
 class DefragModelWrapper():

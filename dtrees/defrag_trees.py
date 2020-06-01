@@ -60,12 +60,15 @@ import time
 from multiprocessing import Pool
 import glob
 
+
 def argwrapper(args):
     return args[0](*args[1:])
 
-#************************
+# ************************
 # Default Class
-#************************
+# ************************
+
+
 class RuleModel(object):
     def __init__(self, modeltype='regression'):
         self.modeltype_ = modeltype
@@ -75,7 +78,7 @@ class RuleModel(object):
         self.pred_ = []
         self.weight_ = []
         self.pred_default_ = []
-    
+
     def __str__(self):
         s = ''
         for i in range(len(self.rule_)):
@@ -89,7 +92,8 @@ class RuleModel(object):
                 if box[0, d] == vmin[d] and box[1, d] == vmax[d]:
                     pass
                 elif box[0, d] > vmin[d] and box[1, d] < vmax[d]:
-                    s += '\t %f <= %s < %f\n' % (box[0, d], self.featurename_[d], box[1, d])
+                    s += '\t %f <= %s < %f\n' % (box[0, d],
+                                                 self.featurename_[d], box[1, d])
                 elif box[0, d] == vmin[d]:
                     s += '\t %s < %f\n' % (self.featurename_[d], box[1, d])
                 elif box[1, d] == vmax[d]:
@@ -101,10 +105,10 @@ class RuleModel(object):
         elif self.modeltype_ == 'classification':
             s += 'y = %d\n' % (self.pred_default_,)
         return s
-    
-    #************************
+
+    # ************************
     # Common Methods
-    #************************
+    # ************************
     def checkZ(self, X, rnum=-1):
         num = X.shape[0]
         if rnum <= 0:
@@ -122,7 +126,7 @@ class RuleModel(object):
                     flg *= (X[:, int(l[0])-1] > l[2])
             Z[:, i] = flg
         return Z
-    
+
     def check(self, X, rnum=-1):
         num = X.shape[0]
         if rnum <= 0:
@@ -140,7 +144,7 @@ class RuleModel(object):
                     flg *= (X[:, int(l[0])-1] > l[2])
             Z[:, i] = flg
         return np.sum(Z, axis=1) > 0, np.sum(Z, axis=1) > 1
-    
+
     def predict(self, X, rnum=-1):
         num = X.shape[0]
         if rnum <= 0:
@@ -168,16 +172,16 @@ class RuleModel(object):
                 idx = np.where(Z[n, :] > 0.5)[0]
                 y[n] = self.pred_[idx[0]]
         return y
-    
+
     def evaluate(self, X, y, rnum=-1):
         c1, c2 = self.check(X, rnum=rnum)
         z = self.predict(X, rnum=rnum)
         if self.modeltype_ == 'regression':
-            err = np.mean((y - z)**2);
+            err = np.mean((y - z)**2)
         elif self.modeltype_ == 'classification':
             err = np.mean(y != z)
         return err, np.mean(c1), np.mean(c2)
-    
+
     def __r2box(self, r, dim):
         vmin = np.array([-np.inf] * dim)
         vmax = np.array([np.inf] * dim)
@@ -188,7 +192,7 @@ class RuleModel(object):
             else:
                 box[0, int(rr[0])-1] = np.maximum(box[0, int(rr[0])-1], rr[2])
         return box, vmin, vmax
-    
+
     def setfeaturename(self, featurename):
         if len(featurename) > 0:
             self.featurename_ = featurename
@@ -196,7 +200,7 @@ class RuleModel(object):
             self.featurename_ = []
             for d in range(self.dim_):
                 self.featurename_.append('x_%d' % (d+1,))
-    
+
     def setdefaultpred(self, y):
         if self.modeltype_ == 'regression':
             self.pred_default_ = np.mean(y)
@@ -206,7 +210,7 @@ class RuleModel(object):
                 w[i] = np.sum(y == w[i])
             w = np.argmax(w)
             self.pred_default_ = w
-    
+
     def printInLatex(self):
         for i in range(len(self.rule_)):
             if self.modeltype_ == 'regression':
@@ -218,16 +222,21 @@ class RuleModel(object):
                 if box[0, d] == vmin[d] and box[1, d] == vmax[d]:
                     pass
                 elif box[0, d] > vmin[d] and box[1, d] < vmax[d]:
-                    print('$%.2f \leq %s < %.2f$, ' % (box[0, d], self.featurename_[d], box[1, d]), end='')
+                    print('$%.2f \leq %s < %.2f$, ' %
+                          (box[0, d], self.featurename_[d], box[1, d]), end='')
                 elif box[0, d] == vmin[d]:
-                    print('$%s < %.2f$, ' % (self.featurename_[d], box[1, d]), end='')
+                    print('$%s < %.2f$, ' %
+                          (self.featurename_[d], box[1, d]), end='')
                 elif box[1, d] == vmax[d]:
-                    print('$%s \geq %.2f$, ' % (self.featurename_[d], box[0, d]), end='')
+                    print('$%s \geq %.2f$, ' %
+                          (self.featurename_[d], box[0, d]), end='')
             print()
-    
-#************************
+
+# ************************
 # Defrag Class
-#************************
+# ************************
+
+
 class DefragModel(RuleModel):
     def __init__(self, modeltype='regression', maxitr=100, qitr=5, tol=1e-6, eps=1e-10, delta=1e-8, kappa=1e-6, seed=0, restart=10, L=-1, verbose=0, njobs=1):
         super().__init__(modeltype=modeltype)
@@ -244,10 +253,10 @@ class DefragModel(RuleModel):
         self.njobs_ = njobs
         self.defragger_ = []
         self.opt_defragger_ = None
-    
-    #************************
+
+    # ************************
     # Fit and Related Methods
-    #************************
+    # ************************
     def fit(self, X, y, splitter, K, fittype='FAB', featurename=[]):
         self.dim_ = X.shape[1]
         self.setfeaturename(featurename)
@@ -259,23 +268,27 @@ class DefragModel(RuleModel):
             for itr in range(self.restart_):
                 if self.L_ > 0 and splitter.shape[0] > self.L_:
                     np.random.seed(self.seed_+itr)
-                    self.Lidx_.append(np.random.permutation(splitter.shape[0])[:self.L_])
+                    self.Lidx_.append(np.random.permutation(
+                        splitter.shape[0])[:self.L_])
                     s = splitter[self.Lidx_[-1], :]
                 else:
                     s = splitter
-                defr = self.fit_defragger(X, y, s, K, fittype, self.modeltype_, self.maxitr_, self.qitr_, self.tol_, self.eps_, self.delta_, self.seed_+itr, self.verbose_)
+                defr = self.fit_defragger(X, y, s, K, fittype, self.modeltype_, self.maxitr_,
+                                          self.qitr_, self.tol_, self.eps_, self.delta_, self.seed_+itr, self.verbose_)
                 self.defragger_.append(defr)
         elif self.njobs_ > 1:
-            pool = Pool(processes = self.njobs_)
+            pool = Pool(processes=self.njobs_)
             args = []
             for itr in range(self.restart_):
                 if self.L_ > 0 and splitter.shape[0] > self.L_:
                     np.random.seed(self.seed_+itr)
-                    self.Lidx_.append(np.random.permutation(splitter.shape[0])[:self.L_])
+                    self.Lidx_.append(np.random.permutation(
+                        splitter.shape[0])[:self.L_])
                     s = splitter[self.Lidx_[-1], :]
                 else:
                     s = splitter
-                args.append((self.fit_defragger, X, y, s, K, fittype, self.modeltype_, self.maxitr_, self.qitr_, self.tol_, self.eps_, self.delta_, self.seed_+itr, self.verbose_))
+                args.append((self.fit_defragger, X, y, s, K, fittype, self.modeltype_, self.maxitr_,
+                             self.qitr_, self.tol_, self.eps_, self.delta_, self.seed_+itr, self.verbose_))
             self.defragger_ = pool.map(argwrapper, args)
             pool.close()
             pool.join()
@@ -285,24 +298,27 @@ class DefragModel(RuleModel):
             if (err > self.defragger_[itr].err_):
                 err = self.defragger_[itr].err_
                 self.opt_defragger_ = self.defragger_[itr]
-        print('Optimal Model >> Seed %3d, TrainingError = %.2f, K = %d' % (self.opt_defragger_.seed_, self.opt_defragger_.err_, self.opt_defragger_.K_))
-        rule, pred = self.__param2rules(X, y, self.opt_defragger_.splitter_, self.opt_defragger_.h_, self.opt_defragger_.E_, kappa=self.kappa_, modeltype=self.modeltype_)
+        print('Optimal Model >> Seed %3d, TrainingError = %.2f, K = %d' % (
+            self.opt_defragger_.seed_, self.opt_defragger_.err_, self.opt_defragger_.K_))
+        rule, pred = self.__param2rules(X, y, self.opt_defragger_.splitter_, self.opt_defragger_.h_,
+                                        self.opt_defragger_.E_, kappa=self.kappa_, modeltype=self.modeltype_)
         self.rule_ = rule
         self.pred_ = pred
         self.weight_ = self.opt_defragger_.A_
-    
+
     def fit_defragger(self, X, y, splitter, K, fittype, modeltype, maxitr, qitr, tol, eps, delta, seed, verbose):
-        defragger = Defragger(modeltype=modeltype, maxitr=maxitr, qitr=qitr, tol=tol, eps=eps, delta=delta, seed=seed, verbose=verbose)
+        defragger = Defragger(modeltype=modeltype, maxitr=maxitr, qitr=qitr,
+                              tol=tol, eps=eps, delta=delta, seed=seed, verbose=verbose)
         defragger.fit(X, y, splitter, K, fittype=fittype)
         return defragger
-    
+
     def predict_proba(self, X):
         y, P = self.opt_defragger_.predict_proba(X)
         return y, P
-        
+
     def predict(self, X, rnum=-1):
         return self.opt_defragger_.predict(X)
-        
+
     def __param2rules(self, X, y, splitter, h, E, kappa=1e-6, modeltype='regression'):
         rule = []
         pred = []
@@ -336,7 +352,7 @@ class DefragModel(RuleModel):
         rule = self.__pruneRule(X, rule)
         pred = np.array(pred)[idx].tolist()
         return rule, pred
-    
+
     def __pruneRule(self, X, rule):
         for i, r in enumerate(rule):
             f = self.__getRuleN(r, X)
@@ -352,7 +368,7 @@ class DefragModel(RuleModel):
                     break
             rule[i] = r
         return rule
-        
+
     def __getRuleN(self, r, X, j=-1):
         num = X.shape[0]
         flg = np.ones(num)
@@ -364,10 +380,10 @@ class DefragModel(RuleModel):
             else:
                 flg *= (X[:, int(l[0])-1] >= l[2])
         return np.sum(flg)
-        
-    #************************
+
+    # ************************
     # Static Methods
-    #************************
+    # ************************
     @staticmethod
     def parseLGBtrees(filename):
         splitter = np.zeros((1, 2))
@@ -379,15 +395,17 @@ class DefragModel(RuleModel):
                 flg = True
             if flg:
                 if 'split_feature=' in line:
-                    idx = np.array([int(s) for s in line.split('=')[1].split(' ')])
+                    idx = np.array([int(s)
+                                    for s in line.split('=')[1].split(' ')])
                 if 'threshold=' in line:
-                    val = np.array([float(v) for v in line.split('=')[1].split(' ')])
+                    val = np.array([float(v)
+                                    for v in line.split('=')[1].split(' ')])
                     flg = False
                     splitter = np.r_[splitter, np.c_[idx, val]]
             line = f.readline()
         f.close()
         return DefragModel.__uniqueRows(splitter[1:, :])
-    
+
     @staticmethod
     def parseXGBtrees(filename):
         splitter = np.zeros((1, 2))
@@ -406,7 +424,7 @@ class DefragModel(RuleModel):
             line = f.readline()
         f.close()
         return DefragModel.__uniqueRows(splitter[1:, :])
-    
+
     @staticmethod
     def __parseXGBsub(mdl):
         splitter = []
@@ -420,7 +438,7 @@ class DefragModel(RuleModel):
             t = float(mdl[line][1][idx2+1:idx3])
             splitter.append((v, t))
         return np.array(splitter)
-    
+
     @staticmethod
     def parseRtrees(dirname):
         splitter = []
@@ -434,14 +452,15 @@ class DefragModel(RuleModel):
                 t = df.ix[i, 4]
                 splitter.append((v, t))
         return DefragModel.__uniqueRows(np.array(splitter))
-    
+
     @staticmethod
     def __uniqueRows(X):
         B = X[np.lexsort(X.T)]
-        idx = np.r_[True, np.any(B[1:]!=B[:-1], axis=tuple(range(1,X.ndim)))]
+        idx = np.r_[True, np.any(
+            B[1:] != B[:-1], axis=tuple(range(1, X.ndim)))]
         Z = B[idx]
         return Z
-    
+
     @staticmethod
     def parseSLtrees(mdl):
         splitter = np.zeros((1, 2))
@@ -452,7 +471,7 @@ class DefragModel(RuleModel):
                 subsplitter = DefragModel.__parseSLTree(tree)
             splitter = np.r_[splitter, subsplitter]
         return splitter[1:, :]
-        
+
     @staticmethod
     def __parseSLTree(tree):
         left = tree.tree_.children_left
@@ -472,7 +491,7 @@ class Defragger(object):
         self.w_ = w
         self.seed_ = seed
         self.verbose_ = verbose
-    
+
     def __getBinary(self, X, splitter):
         r = splitter.shape[0]
         num = X.shape[0]
@@ -480,7 +499,7 @@ class Defragger(object):
         for i in range(r):
             R[:, i] = X[:, int(splitter[i, 0])] >= splitter[i, 1]
         return R
-    
+
     def fit(self, X, y, splitter, K, fittype='FAB'):
         self.dim_ = X.shape[1]
         self.splitter_ = splitter
@@ -502,8 +521,9 @@ class Defragger(object):
         self.A_ = self.A_[idx]
         self.Q_ = self.Q_[:, idx]
         self.err_ = self.evaluate(X, y)
-        print('[Seed %3d] TrainingError = %.2f, K = %d' % (self.seed_, self.err_, self.K_))
-        
+        print('[Seed %3d] TrainingError = %.2f, K = %d' %
+              (self.seed_, self.err_, self.K_))
+
     def predict_proba(self, X):
         R = self.__getBinary(X, self.splitter_)
         num = X.shape[0]
@@ -517,11 +537,11 @@ class Defragger(object):
         elif self.modeltype_ == "classification":
             y = np.argmax(self.h_, axis=0)
         return y, P
-        
+
     def predict(self, X):
         y, P = self.predict_proba(X)
         return y[np.argmax(P, axis=1)]
-    
+
     def evaluate(self, X, y):
         z = self.predict(X)
         if self.modeltype_ == 'regression':
@@ -529,12 +549,12 @@ class Defragger(object):
         elif self.modeltype_ == 'classification':
             err = 1 - np.mean(y == z)
         return err
-    
+
     def __fitEM(self, X, y, splitter, K, seed):
         R = self.__getBinary(X, splitter)
         dim = R.shape[1]
         num = X.shape[0]
-        
+
         # initialization of Q, h, E, A
         np.random.seed(seed)
         Q = np.random.rand(num, K)
@@ -548,19 +568,22 @@ class Defragger(object):
         E = np.random.rand(dim, K)
         A = np.random.rand(K)
         A /= np.sum(A)
-        
+
         # train
         Qnew = Q.copy()
         hnew = h.copy()
         Enew = E.copy()
         Anew = A.copy()
-        f = self.__objEM(y, R, Q, h, E, A, eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
+        f = self.__objEM(y, R, Q, h, E, A, eps=self.eps_,
+                         w=self.w_, modeltype=self.modeltype_)
         for itr in range(self.maxitr_):
-            Qnew = self.__updateQEM(y, R, Q, h, E, A, eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
+            Qnew = self.__updateQEM(
+                y, R, Q, h, E, A, eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
             hnew = self.__updateH(y, Qnew, h, modeltype=self.modeltype_)
             Enew = self.__updateE(R, Qnew, E)
             Anew = self.__updateA(Qnew, A)
-            fnew = self.__objEM(y, R, Qnew, hnew, Enew, Anew, eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
+            fnew = self.__objEM(y, R, Qnew, hnew, Enew, Anew,
+                                eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
             if self.verbose_ > 0:
                 if np.mod(itr, self.verbose_) == 0:
                     print(itr, fnew, fnew - f)
@@ -577,12 +600,12 @@ class Defragger(object):
         self.Q_ = Q
         self.f_ = f
         self.K_ = K
-        
+
     def __fitFAB(self, X, y, splitter, Kmax, seed):
         R = self.__getBinary(X, splitter)
         dim = R.shape[1]
         num = X.shape[0]
-        
+
         # initialization of Q, h, E, A, K
         np.random.seed(seed)
         Q = np.random.rand(num, Kmax)
@@ -597,28 +620,33 @@ class Defragger(object):
         A = np.random.rand(Kmax)
         A /= np.sum(A)
         K = np.arange(Kmax)
-        
+
         # train
         Qnew = Q.copy()
         hnew = h.copy()
         Enew = E.copy()
         Anew = A.copy()
         Knew = K.copy()
-        f = self.__objFAB(y, R, Q, h, E, A, K, eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
+        f = self.__objFAB(y, R, Q, h, E, A, K, eps=self.eps_,
+                          w=self.w_, modeltype=self.modeltype_)
         for itr in range(self.maxitr_):
             Qnew = Q.copy()
             if itr < self.qitr_:
-                Qnew[:, K] = self.__updateQFAB(y, R, Q[:, K], h[:, K], E[:, K], A[K], eps=self.eps_, w=self.w_, modeltype=self.modeltype_, maxitr=2)
+                Qnew[:, K] = self.__updateQFAB(
+                    y, R, Q[:, K], h[:, K], E[:, K], A[K], eps=self.eps_, w=self.w_, modeltype=self.modeltype_, maxitr=2)
             else:
-                Qnew[:, K] = self.__updateQFAB(y, R, Q[:, K], h[:, K], E[:, K], A[K], eps=self.eps_, w=self.w_, modeltype=self.modeltype_, maxitr=10)
+                Qnew[:, K] = self.__updateQFAB(
+                    y, R, Q[:, K], h[:, K], E[:, K], A[K], eps=self.eps_, w=self.w_, modeltype=self.modeltype_, maxitr=10)
             Knew = np.where(np.mean(Qnew, axis=0) > self.delta_)[0]
             hnew = h.copy()
-            hnew[:, Knew] = self.__updateH(y, Qnew[:, Knew], h[:, Knew], modeltype=self.modeltype_)
+            hnew[:, Knew] = self.__updateH(
+                y, Qnew[:, Knew], h[:, Knew], modeltype=self.modeltype_)
             Enew = E.copy()
             Enew[:, Knew] = self.__updateE(R, Qnew[:, Knew], E[:, Knew])
             Anew = A.copy()
             Anew[Knew] = self.__updateA(Qnew[:, Knew], A[Knew])
-            fnew = self.__objFAB(y, R, Qnew, hnew, Enew, Anew, Knew, eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
+            fnew = self.__objFAB(y, R, Qnew, hnew, Enew, Anew, Knew,
+                                 eps=self.eps_, w=self.w_, modeltype=self.modeltype_)
             if self.verbose_ > 0:
                 if np.mod(itr, self.verbose_) == 0:
                     print(itr, fnew, fnew - f, Knew)
@@ -636,65 +664,73 @@ class Defragger(object):
         self.Q_ = Q[:, K]
         self.f_ = f
         self.K_ = K.size
-        
+
     def __getLogS(self, k, R, E, A, eps=1e-10):
-        logS = R.dot(np.log(np.maximum(eps, E[:, k]))) + (1 - R).dot(np.log(np.maximum(eps, 1 - E[:, k])))
+        logS = R.dot(np.log(np.maximum(
+            eps, E[:, k]))) + (1 - R).dot(np.log(np.maximum(eps, 1 - E[:, k])))
         logS += np.log(A[k])
         return logS
-        
+
     def __getLogP(self, k, y, R, h, E, A, eps=1e-10, w=1, modeltype='regression'):
         num = y.size
         logP = np.zeros(num)
         if modeltype == 'regression':
-            logP = - h[1, k] * ((y - h[0, k])**2) / 2 - np.log(2 * np.pi / h[1, k]) / 2
+            logP = - h[1, k] * ((y - h[0, k])**2) / 2 - \
+                np.log(2 * np.pi / h[1, k]) / 2
             t = 2
         elif modeltype == 'classification':
             C = h.shape[0]
             for c in range(C):
                 logP[y == c] = np.log(h[c, k])
             t = C
-        logP += w * (R.dot(np.log(np.maximum(eps, E[:, k]))) + (1 - R).dot(np.log(np.maximum(eps, 1 - E[:, k]))))
+        logP += w * (R.dot(np.log(np.maximum(eps, E[:, k]))) + (
+            1 - R).dot(np.log(np.maximum(eps, 1 - E[:, k]))))
         logP += np.log(A[k])
         return logP, t
-        
+
     def __objEM(self, y, R, Q, h, E, A, eps=1e-10, w=1, modeltype='regression'):
         K = Q.shape[1]
         f = 0
         for k in range(K):
-            logP, t = self.__getLogP(k, y, R, h, E, A, eps=eps, w=w, modeltype=modeltype)
+            logP, t = self.__getLogP(
+                k, y, R, h, E, A, eps=eps, w=w, modeltype=modeltype)
             f += Q[:, k].dot(logP)
             f -= Q[:, k].dot(np.log(Q[:, k]))
         return f
-    
+
     def __objFAB(self, y, R, Q, h, E, A, K, eps=1e-10, w=1, modeltype='regression'):
         L = R.shape[1]
         f = 0
         for k in K:
-            logP, t = self.__getLogP(k, y, R, h, E, A, eps=eps, modeltype=modeltype)
+            logP, t = self.__getLogP(
+                k, y, R, h, E, A, eps=eps, modeltype=modeltype)
             f += Q[:, k].dot(logP)
             f -= Q[:, k].dot(np.log(Q[:, k]))
             f -= 0.5 * (1 + t + w * L) * np.log(1 + np.sum(Q[:, k]))
         return f
-    
+
     def __updateQEM(self, y, R, Q, h, E, A, maxitr=1000, tol=1e-6, eps=1e-10, w=1, modeltype='regression'):
         K = Q.shape[1]
         F = Q.copy()
         for k in range(K):
-            logP, t = self.__getLogP(k, y, R, h, E, A, eps=eps, w=w, modeltype=modeltype)
+            logP, t = self.__getLogP(
+                k, y, R, h, E, A, eps=eps, w=w, modeltype=modeltype)
             F[:, k] = logP
         return self.__normExp(F, eps=eps)
-    
+
     def __updateQFAB(self, y, R, Q, h, E, A, maxitr=1000, tol=1e-6, eps=1e-10, w=1, modeltype='regression'):
         K = Q.shape[1]
         L = R.shape[1]
         F = Q.copy()
         for k in range(K):
-            logP, t = self.__getLogP(k, y, R, h, E, A, eps=eps, w=w, modeltype=modeltype)
+            logP, t = self.__getLogP(
+                k, y, R, h, E, A, eps=eps, w=w, modeltype=modeltype)
             F[:, k] = logP
         g = self.__objQ(F, Q, t, w * L)
         Qnew = Q.copy()
         for itr in range(maxitr):
-            S = F - 0.5 * (1 + t + w * L) / (1 + np.sum(Q, axis=0)[np.newaxis, :])
+            S = F - 0.5 * (1 + t + w * L) / \
+                (1 + np.sum(Q, axis=0)[np.newaxis, :])
             Qnew = self.__normExp(S, eps=eps)
             gnew = self.__objQ(F, Qnew, t, w * L)
             if gnew > g:
@@ -703,7 +739,7 @@ class Defragger(object):
                 break
             g = gnew
         return Q
-    
+
     def __objQ(self, F, Q, t, L):
         f = 0
         for k in range(Q.shape[1]):
@@ -711,7 +747,7 @@ class Defragger(object):
             f -= Q[:, k].dot(np.log(Q[:, k]))
             f -= 0.5 * (1 + t + L) * np.log(1 + np.sum(Q[:, k]))
         return f
-        
+
     def __updateH(self, y, Q, h, modeltype='regression'):
         K = Q.shape[1]
         for k in range(K):
@@ -723,16 +759,16 @@ class Defragger(object):
                 for c in range(C):
                     h[c, k] = np.sum(Q[y == c, k]) / np.sum(Q[:, k])
         return h
-    
+
     def __updateE(self, R, Q, E):
         K = Q.shape[1]
         for k in range(K):
             E[:, k] = R.T.dot(Q[:, k]) / np.sum(Q[:, k])
         return E
-    
+
     def __updateA(self, Q, A):
         return np.sum(Q, axis=0) / np.sum(Q)
-    
+
     def __normExp(self, A, eps=1e-10):
         if A.shape[1] == 1:
             return np.ones((A.shape[0], 1))
